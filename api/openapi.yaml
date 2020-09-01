@@ -1,0 +1,322 @@
+openapi: 3.0.0
+info:
+  contact:
+    email: brock@email.com
+    name: Brock
+    url: https://github.com/broxgit
+  description: REST API for Managing Library Books
+  license:
+    name: MIT
+  title: Brock's Library
+  version: 0.1.0
+servers:
+- url: http://{host}/library-service/v1
+  variables:
+    host:
+      default: localhost:8081
+paths:
+  /books:
+    get:
+      operationId: listBooks
+      parameters:
+      - description: How many items to return at one time (max 100)
+        explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          format: int32
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Books'
+          description: A paged array of books
+          headers:
+            x-next:
+              description: A link to the next page of responses
+              explode: false
+              schema:
+                type: string
+              style: simple
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unexpected error
+      summary: List all books
+      tags:
+      - books
+    post:
+      operationId: createBook
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Book'
+        description: Book
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+          description: Created
+          headers:
+            ETag:
+              description: Current version
+              explode: false
+              schema:
+                example: 'ETag: "207e94b8-bc96-446a-b5f0-11c860dae234"'
+              style: simple
+            Location:
+              description: URL of a newly created resource
+              explode: false
+              schema:
+                example: 'Location: http://localhost:8081/library-service/v1/books/7dc16089-bf12-4269-a8dd-a16e181fdc1c'
+              style: simple
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unexpected error
+      summary: Create a book
+      tags:
+      - books
+  /books/{id}:
+    delete:
+      operationId: deleteBookById
+      parameters:
+      - description: The id of the book to delete
+        example: 207e94b8-bc96-446a-b5f0-11c860dae234
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          format: UUID
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+          type: string
+        style: simple
+      - description: Current version in double quotes
+        example: 'If-Match: "207e94b8-bc96-446a-b5f0-11c860dae234"'
+        explode: false
+        in: header
+        name: If-Match
+        required: true
+        schema:
+          pattern: ^"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"$
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not Found
+      summary: Deletes a book for a given id.
+      tags:
+      - books
+    get:
+      operationId: getBookById
+      parameters:
+      - description: The id of the book to retrieve
+        example: 207e94b8-bc96-446a-b5f0-11c860dae234
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          format: UUID
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+          description: OK
+          headers:
+            ETag:
+              description: Current version
+              explode: false
+              schema:
+                example: 'ETag: "207e94b8-bc96-446a-b5f0-11c860dae234"'
+              style: simple
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not Found
+      summary: Returns a book for a given id.
+      tags:
+      - books
+    put:
+      operationId: updateBookById
+      parameters:
+      - description: The id of the book to update
+        example: 207e94b8-bc96-446a-b5f0-11c860dae234
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          format: UUID
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+          type: string
+        style: simple
+      - description: Current version in double quotes
+        example: 'If-Match: "207e94b8-bc96-446a-b5f0-11c860dae234"'
+        explode: false
+        in: header
+        name: If-Match
+        required: true
+        schema:
+          pattern: ^"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"$
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Book'
+        description: Book
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+          description: OK
+          headers:
+            ETag:
+              description: Current version
+              explode: false
+              schema:
+                example: 'ETag: "207e94b8-bc96-446a-b5f0-11c860dae234"'
+              style: simple
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Not Found
+      summary: Updates a book for a given id
+      tags:
+      - books
+components:
+  schemas:
+    Book:
+      example:
+        creationTime: 2000-01-23T04:56:07.000+00:00
+        year: 1925
+        comment: The story of the mysteriously wealthy Jay Gatsby and his love for
+          the beautiful Daisy Buchanan.
+        id: fb59b161-25c4-4ac8-9a8a-94924189bcd4
+        title: The Great Gatsby
+        version: 3611f597-4b15-4b15-9c83-43ed499eeec8
+        authors:
+        - F. Scott Fitzgerald
+        lastUpdateTime: 2000-01-23T04:56:07.000+00:00
+      properties:
+        id:
+          description: The object ID of resource
+          example: fb59b161-25c4-4ac8-9a8a-94924189bcd4
+          format: uuid
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+          readOnly: true
+          type: string
+        title:
+          description: the official title of the book
+          example: The Great Gatsby
+          type: string
+        authors:
+          description: A list of authors who wrote the book
+          example:
+          - F. Scott Fitzgerald
+          items:
+            description: An author who contributed to this book
+            type: string
+          type: array
+        year:
+          description: the year the book was originally published
+          example: 1925
+          format: int32
+          type: integer
+        version:
+          description: The identifier for a specific version of the resource
+          example: 3611f597-4b15-4b15-9c83-43ed499eeec8
+          format: uuid
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+          readOnly: true
+          type: string
+        creationTime:
+          description: The UTC time the object was created
+          format: date-time
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+          readOnly: true
+          type: string
+        lastUpdateTime:
+          description: The UTC time the object was updated
+          format: date-time
+          pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{0,9}Z$
+          readOnly: true
+          type: string
+        comment:
+          description: Comments about the book
+          example: The story of the mysteriously wealthy Jay Gatsby and his love for
+            the beautiful Daisy Buchanan.
+          maxLength: 1000
+          type: string
+      required:
+      - authors
+      - id
+      - title
+      - year
+      type: object
+    Books:
+      items:
+        $ref: '#/components/schemas/Book'
+      type: array
+    Error:
+      properties:
+        code:
+          format: int32
+          type: integer
+        message:
+          type: string
+      required:
+      - code
+      - message
+      type: object

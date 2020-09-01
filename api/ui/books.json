@@ -1,0 +1,435 @@
+{
+   "openapi": "3.0.0",
+   "info": {
+      "version": "0.1.0",
+      "title": "Brock's Library",
+      "description": "REST API for Managing Library Books",
+      "contact": {
+         "name": "Brock",
+         "url": "https://github.com/broxgit",
+         "email": "brock@email.com"
+      },
+      "license": {
+         "name": "MIT"
+      }
+   },
+   "servers": [
+      {
+         "url": "http://{host}/library-service/v1",
+         "variables": {
+            "host": {
+               "default": "localhost:8081"
+            }
+         }
+      }
+   ],
+   "paths": {
+      "/books": {
+         "get": {
+            "summary": "List all books",
+            "operationId": "listBooks",
+            "tags": [
+               "books"
+            ],
+            "parameters": [
+               {
+                  "name": "limit",
+                  "in": "query",
+                  "description": "How many items to return at one time (max 100)",
+                  "required": false,
+                  "schema": {
+                     "type": "integer",
+                     "format": "int32"
+                  }
+               }
+            ],
+            "responses": {
+               "200": {
+                  "description": "A paged array of books",
+                  "headers": {
+                     "x-next": {
+                        "description": "A link to the next page of responses",
+                        "schema": {
+                           "type": "string"
+                        }
+                     }
+                  },
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Books"
+                        }
+                     }
+                  }
+               },
+               "default": {
+                  "description": "unexpected error",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Error"
+                        }
+                     }
+                  }
+               }
+            }
+         },
+         "post": {
+            "summary": "Create a book",
+            "operationId": "createBook",
+            "tags": [
+               "books"
+            ],
+            "requestBody": {
+               "description": "Book",
+               "content": {
+                  "application/json": {
+                     "schema": {
+                        "$ref": "#/components/schemas/Book"
+                     }
+                  }
+               },
+               "required": true
+            },
+            "responses": {
+               "201": {
+                  "description": "Created",
+                  "headers": {
+                     "ETag": {
+                        "description": "Current version",
+                        "style": "simple",
+                        "schema": {
+                           "example": "ETag: \"207e94b8-bc96-446a-b5f0-11c860dae234\""
+                        }
+                     },
+                     "Location": {
+                        "description": "URL of a newly created resource",
+                        "style": "simple",
+                        "schema": {
+                           "example": "Location: http://localhost:8081/library-service/v1/books/7dc16089-bf12-4269-a8dd-a16e181fdc1c"
+                        }
+                     }
+                  },
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Book"
+                        }
+                     }
+                  }
+               },
+               "default": {
+                  "description": "unexpected error",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Error"
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      },
+      "/books/{id}": {
+         "get": {
+            "tags": [
+               "books"
+            ],
+            "summary": "Returns a book for a given id.",
+            "operationId": "getBookById",
+            "parameters": [
+               {
+                  "name": "id",
+                  "in": "path",
+                  "description": "The id of the book to retrieve",
+                  "required": true,
+                  "schema": {
+                     "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                     "type": "string",
+                     "format": "UUID"
+                  },
+                  "example": "207e94b8-bc96-446a-b5f0-11c860dae234"
+               }
+            ],
+            "responses": {
+               "200": {
+                  "description": "OK",
+                  "headers": {
+                     "ETag": {
+                        "description": "Current version",
+                        "style": "simple",
+                        "schema": {
+                           "example": "ETag: \"207e94b8-bc96-446a-b5f0-11c860dae234\""
+                        }
+                     }
+                  },
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Book"
+                        }
+                     }
+                  }
+               },
+               "400": {
+                  "description": "Bad Request",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Error"
+                        }
+                     }
+                  }
+               },
+               "404": {
+                  "description": "Not Found",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Error"
+                        }
+                     }
+                  }
+               }
+            }
+         },
+         "put": {
+            "tags": [
+               "books"
+            ],
+            "summary": "Updates a book for a given id",
+            "operationId": "updateBookById",
+            "parameters": [
+               {
+                  "name": "id",
+                  "in": "path",
+                  "description": "The id of the book to update",
+                  "required": true,
+                  "schema": {
+                     "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                     "type": "string",
+                     "format": "UUID"
+                  },
+                  "example": "207e94b8-bc96-446a-b5f0-11c860dae234"
+               },
+               {
+                  "name": "If-Match",
+                  "in": "header",
+                  "description": "Current version in double quotes",
+                  "required": true,
+                  "schema": {
+                     "pattern": "^\"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\"$",
+                     "type": "string"
+                  },
+                  "example": "If-Match: \"207e94b8-bc96-446a-b5f0-11c860dae234\""
+               }
+            ],
+            "requestBody": {
+               "description": "Book",
+               "content": {
+                  "application/json": {
+                     "schema": {
+                        "$ref": "#/components/schemas/Book"
+                     }
+                  }
+               },
+               "required": true
+            },
+            "responses": {
+               "200": {
+                  "description": "OK",
+                  "headers": {
+                     "ETag": {
+                        "description": "Current version",
+                        "style": "simple",
+                        "schema": {
+                           "example": "ETag: \"207e94b8-bc96-446a-b5f0-11c860dae234\""
+                        }
+                     }
+                  },
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Book"
+                        }
+                     }
+                  }
+               },
+               "400": {
+                  "description": "Bad Request",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Error"
+                        }
+                     }
+                  }
+               },
+               "404": {
+                  "description": "Not Found",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Error"
+                        }
+                     }
+                  }
+               }
+            }
+         },
+         "delete": {
+            "tags": [
+               "books"
+            ],
+            "summary": "Deletes a book for a given id.",
+            "operationId": "deleteBookById",
+            "parameters": [
+               {
+                  "name": "id",
+                  "in": "path",
+                  "description": "The id of the book to delete",
+                  "required": true,
+                  "schema": {
+                     "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                     "type": "string",
+                     "format": "UUID"
+                  },
+                  "example": "207e94b8-bc96-446a-b5f0-11c860dae234"
+               },
+               {
+                  "name": "If-Match",
+                  "in": "header",
+                  "description": "Current version in double quotes",
+                  "required": true,
+                  "schema": {
+                     "pattern": "^\"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\"$",
+                     "type": "string"
+                  },
+                  "example": "If-Match: \"207e94b8-bc96-446a-b5f0-11c860dae234\""
+               }
+            ],
+            "responses": {
+               "204": {
+                  "description": "No Content"
+               },
+               "400": {
+                  "description": "Bad Request",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Error"
+                        }
+                     }
+                  }
+               },
+               "404": {
+                  "description": "Not Found",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Error"
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+   },
+   "components": {
+      "schemas": {
+         "Book": {
+            "type": "object",
+            "required": [
+               "id",
+               "title",
+               "authors",
+               "year"
+            ],
+            "properties": {
+               "id": {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string",
+                  "description": "The object ID of resource",
+                  "format": "uuid",
+                  "readOnly": true,
+                  "example": "fb59b161-25c4-4ac8-9a8a-94924189bcd4"
+               },
+               "title": {
+                  "type": "string",
+                  "description": "the official title of the book",
+                  "example": "The Great Gatsby"
+               },
+               "authors": {
+                  "description": "A list of authors who wrote the book",
+                  "type": "array",
+                  "items": {
+                     "type": "string",
+                     "description": "An author who contributed to this book"
+                  },
+                  "example": [
+                     "F. Scott Fitzgerald"
+                  ]
+               },
+               "year": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "the year the book was originally published",
+                  "example": 1925
+               },
+               "version": {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string",
+                  "description": "The identifier for a specific version of the resource",
+                  "format": "uuid",
+                  "readOnly": true,
+                  "example": "3611f597-4b15-4b15-9c83-43ed499eeec8"
+               },
+               "creationTime": {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  "type": "string",
+                  "description": "The UTC time the object was created",
+                  "format": "date-time",
+                  "readOnly": true
+               },
+               "lastUpdateTime": {
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{0,9}Z$",
+                  "type": "string",
+                  "description": "The UTC time the object was updated",
+                  "format": "date-time",
+                  "readOnly": true
+               },
+               "comment": {
+                  "maxLength": 1000,
+                  "type": "string",
+                  "description": "Comments about the book",
+                  "example": "The story of the mysteriously wealthy Jay Gatsby and his love for the beautiful Daisy Buchanan."
+               }
+            }
+         },
+         "Books": {
+            "type": "array",
+            "items": {
+               "$ref": "#/components/schemas/Book"
+            }
+         },
+         "Error": {
+            "type": "object",
+            "required": [
+               "code",
+               "message"
+            ],
+            "properties": {
+               "code": {
+                  "type": "integer",
+                  "format": "int32"
+               },
+               "message": {
+                  "type": "string"
+               }
+            }
+         }
+      }
+   }
+}
