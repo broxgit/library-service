@@ -19,24 +19,39 @@ The following instructions/commands should be executed in the root of the librar
 
 Run the following command to run the server locally:
 ```bash
-go run cmd\libraryservice\main.go
+go run main.go
 ```
 
-### Running in Docker 
+### Running in Docker
 The following instructions/commands should be executed in the root of the library-service directory.
 
-#### Build the Go Binary:
-**Windows Users Only**    
-Create an environment variable for Go which will allow Windows users to build binaries for the Linux architecture: `GOOS=linux`    
+#### Option 1: Pull from DockerHub
+```bash
+docker pull broxhub/library-service
+docker run -p 8081:8081 broxhub/library-service
+```
 
-1.  `go build -o library-service`
-
-#### Run the Docker Commands:
-1. `docker build -t library-service .`
-2. `docker run -p 8081:8081 library-service`
+#### Option 2: Build the Docker image locally
+```bash
+docker build -t library-service .
+docker run -p 8081:8081 library-service
+```
  
 ## View the API Definition
 On a browser, navigate to http://localhost:8081/swaggerui/
+
+## Running Smoke Tests
+Within this repository, there is a Python script that will run some quick tests on the Library Service server.
+
+1. Install the required packages for the script
+    ```bash
+    pip install -r test/requirements.txt
+    ```
+
+2. Run the script
+    ```bash
+    python test/smoketest.py
+    ```
 
 ## API Usage Examples with Curl
 

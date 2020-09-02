@@ -6,7 +6,7 @@ RUN mkdir /build
 ADD . /build/
 WORKDIR /build
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o main cmd/libraryservice/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o main
 
 FROM golang
 
