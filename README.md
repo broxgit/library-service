@@ -33,9 +33,9 @@ Python 3.6
 openAPI 3.0
 
 # Running the Server
-To run the server without cloning the repo, skip to [these instructions.](#option-1-pull-from-dockerhub)
+To run the server without cloning the repo, pull and run the Docker image by following [these instructions.](#option-1-pull-from-dockerhub)
 
-Otherwise, cloning the repo will allows for additional ways to run the server and provides users with a Python script for testing the server functionality.
+Otherwise, cloning the repo will allow for additional ways to run the server and provides users with a Python script for testing the server functionality.
 
 ## Running Locally
 The following instructions/commands should be executed in the root of the library-service directory.
