@@ -1,5 +1,23 @@
 # Library API Service
 
+- [Library API Service](#library-api-service)
+  * [Project Requirements](#project-requirements)
+  * [Technologies Used](#technologies-used)
+- [Running the Server](#running-the-server)
+  * [Running Locally](#running-locally)
+    + [Running in Docker](#running-in-docker)
+      - [Option 1: Pull from DockerHub](#option-1--pull-from-dockerhub)
+      - [Option 2: Build the Docker image locally](#option-2--build-the-docker-image-locally)
+  * [View the API Definition](#view-the-api-definition)
+  * [Running Smoke Tests](#running-smoke-tests)
+  * [API Usage Examples with Curl](#api-usage-examples-with-curl)
+    + [Creating a Book](#creating-a-book)
+    + [Updating a Book](#updating-a-book)
+    + [Deleting a Book](#deleting-a-book)
+    + [Getting a Single Book](#getting-a-single-book)
+    + [Getting a List of Books](#getting-a-list-of-books)
+  
+
 ## Project Requirements
 Using a language of your choice, write a minimal library API that can perform the following functions:
 - List all books in the library
@@ -13,6 +31,11 @@ Docker
 Python 3.6
 
 openAPI 3.0
+
+# Running the Server
+To run the server without cloning the repo, skip to [these instructions.](#option-1-pull-from-dockerhub)
+
+Otherwise, cloning the repo will allows for additional ways to run the server and provides users with a Python script for testing the server functionality.
 
 ## Running Locally
 The following instructions/commands should be executed in the root of the library-service directory.

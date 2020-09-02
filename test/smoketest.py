@@ -1,4 +1,6 @@
 import json
+import random
+import re
 from copy import deepcopy
 
 import requests
@@ -18,6 +20,17 @@ BOOK_DATA = {
     "year": 1925,
     "comment": "The story of the mysteriously wealthy Jay Gatsby and his love for the beautiful Daisy Buchanan."
 }
+
+
+def log_title(msg, decorator=None):
+    d = decorator
+    if not decorator:
+        d = "-"
+    message = ' {} '.format(msg)
+    lines = d * 56
+    print("\n\n{}".format(lines))
+    print(message.center(56, d))
+    print(lines)
 
 
 def check_status(res, expected_status, operation):
@@ -58,90 +71,213 @@ def create_book():
     res = requests.post(BOOKS_URL, json=BOOK_DATA)
 
     if not check_status(res, 201, "createBook"):
-        exit(-1)
+        print("ERROR: Create book failed...")
+        return None
 
     book = json.loads(res.content)
-    print("Successfully created book with id: {}".format(book['id']))
-    return book['id']
-
-
-def get_book(id):
-    res = requests.get(BOOKS_BY_ID_URL % id)
-
-    if not check_status(res, 200, "getBookById"):
-        exit(-1)
-
-    book = json.loads(res.content)
-    print("Retrieved book by id successfully: {}".format(book['title']))
     return book
 
 
-def update_book(book):
-    data = deepcopy(book)
-    data['year'] = 1945
-    headers = {'If-Match': "\"{}\"".format(data['version'])}
-    res = requests.put(BOOKS_BY_ID_URL % book_id, json=data, headers=headers)
+def delete_book(book):
+    headers = {'If-Match': book['version']}
+    return requests.delete(BOOKS_BY_ID_URL % book['id'], headers=headers)
+
+
+def update_book(updated_book):
+    headers = {'If-Match': updated_book['version']}
+    return requests.put(BOOKS_BY_ID_URL % updated_book['id'], json=updated_book, headers=headers)
+
+
+def create_book_test():
+    log_title("Starting createBook Test")
+    temp_book = create_book()
+    if temp_book:
+        print("SUCCESS: Created book with id: {}".format(temp_book['id']))
+    return temp_book
+
+
+def get_book(book):
+    log_title("Starting getBookById Test")
+    res = requests.get(BOOKS_BY_ID_URL % book['id'])
 
     if not check_status(res, 200, "getBookById"):
-        exit(-1)
+        print("ERROR: Get book by id failed...")
+        return None
+
+    book = json.loads(res.content)
+    print("SUCCESS: Retrieved book by id successfully: {}".format(book['title']))
+    return book
+
+
+def update_book_test(book):
+    log_title("Starting updateBookById Test")
+    data = deepcopy(book)
+    data['year'] = 1945
+
+    res = update_book(data)
+
+    if not check_status(res, 200, "updateBookById"):
+        print("ERROR: Update book by id failed...")
+        return None
 
     book = json.loads(res.content)
 
     if book['year'] != 1945:
-        print("Unable to update book data")
-        exit(-2)
+        print("ERROR: Unable to update book data")
+        return None
 
-    print("Updated book by id successfully: {}".format(book['title']))
+    print("SUCCESS: Updated book by id successfully: {}".format(book['title']))
     return book
 
 
 def list_books():
+    log_title("Starting listBooks Test")
     res = requests.get(BOOKS_URL)
 
     if not check_status(res, 200, "listBooks"):
-        exit(-1)
+        return None
 
     books = json.loads(res.content)
-    print("Successfully retrieved a list of books.")
+    print("SUCCESS: Retrieved a list of books.")
     return books
 
 
-def delete_book(id, book):
-    headers = {'If-Match': "\"{}\"".format(book['version'])}
-    res = requests.delete(BOOKS_BY_ID_URL % id, headers=headers)
+def delete_book_test(book):
+    log_title("Starting deleteBookById Test")
+    res = delete_book(book)
 
     if not check_status(res, 204, "deleteBookById"):
-        exit(-1)
+        return False
 
-    print("Successfully deleted book with id: {} with HTTP Status Code: {}".format(id, res.status_code))
+    print("SUCCESS: Deleted book with id: {}".format(book['id']))
+    return True
 
 
 def delete_all_books():
-    books = list_books()
+    res = requests.get(BOOKS_URL)
+    if not check_status(res, 200, "listBooksForDeletion"):
+        return None
 
-    if not books:
+    temp_books = json.loads(res.content)
+
+    if not temp_books:
         return
 
-    for x in range(0, len(books)):
-        book = books[x]
-        headers = {'If-Match': "\"{}\"".format(book['version'])}
-        res = requests.delete(BOOKS_BY_ID_URL % id, headers=headers)
+    for x in range(0, len(temp_books)):
+        book = temp_books[x]
+        headers = {'If-Match': book['version']}
+        res = requests.delete(BOOKS_BY_ID_URL % book['id'], headers=headers)
 
         if not check_status(res, 204, "deleteBookById"):
-            exit(-1)
+            return False
 
-        print(res.content)
+        print("Delete status code: {}".format(res.status_code))
+
+
+# should fail
+def try_create_duplicate_book():
+    log_title("Starting Duplicated Book Test")
+    temp_book = create_book()
+
+    res = requests.post(BOOKS_URL, json=BOOK_DATA)
+
+    if not check_status(res, 400, "createDuplicateBook"):
+        return False
+
+    print("SUCCESS: Duplicate book creation successfully blocked")
+
+    delete_book(temp_book)
+    return True
+
+
+# should fail
+def try_update_invalid_if_match():
+    log_title("Starting Update with Invalid If-Match Tests")
+    temp_book = create_book()
+    ver = temp_book['version']
+
+    # first try, completely different If-Match
+    temp_book['version'] = re.sub(r'[a-zA-Z]', str(random.randint(0, 9)), ver)
+    res = update_book(temp_book)
+
+    if not check_status(res, 400, "updateInvalidIfMatch"):
+        return False
+    print("SUCCESS: Updating Book with Random If-Match Successfully Blocked")
+
+    # second try, one character change in If-Match
+    temp_book['version'] = ver[:-1] + "a"
+    res_two = update_book(temp_book)
+
+    if not check_status(res_two, 400, "updateInvalidIfMatch"):
+        return False
+    print("SUCCESS: Updating Book using If-Match with one character changed Successfully Blocked")
+
+    temp_book['version'] = ver
+    delete_book(temp_book)
+    return True
+
+
+# should fail
+def try_delete_invalid_if_match():
+    log_title("Starting Delete with Invalid If-Match Tests")
+    temp_book = create_book()
+    ver = temp_book['version']
+
+    # first try, completely different If-Match
+    temp_book['version'] = re.sub(r'[a-zA-Z]', str(random.randint(0, 9)), ver)
+    res = delete_book(temp_book)
+
+    if not check_status(res, 400, "deleteInvalidIfMatch"):
+        return False
+    print("SUCCESS: Deleting Book with Random If-Match Successfully Blocked")
+
+    # second try, one character change in If-Match
+    temp_book['version'] = ver[:-1] + "a"
+    res_two = delete_book(temp_book)
+
+    if not check_status(res_two, 400, "deleteInvalidIfMatch"):
+        return False
+    print("SUCCESS: Deleting Book using If-Match with one character changed Successfully Blocked")
+
+    delete_book(temp_book)
+    return True
+
+
+def positive_tests():
+    new_book = create_book_test()
+
+    if not new_book:
+        print("ERROR: Cannot continue positive tests. Skipping...")
+        return
+
+    created_book = get_book(new_book)
+
+    if not created_book:
+        print("ERROR: Cannot continue positive tests. Skipping...")
+        return
+
+    updated_book = update_book_test(created_book)
+
+    if not updated_book:
+        print("ERROR: Cannot continue positive tests. Skipping...")
+        return
+
+    list_books()
+
+    delete_book_test(updated_book)
+
+
+def negative_tests():
+    try_create_duplicate_book()
+    try_update_invalid_if_match()
+    try_delete_invalid_if_match()
 
 
 if __name__ == '__main__':
-    # delete_all_books()
+    delete_all_books()
 
-    book_id = create_book()
+    log_title("RUNNING POSITIVE SMOKE TESTS", '*')
+    positive_tests()
 
-    created_book = get_book(book_id)
-
-    updated_book = update_book(created_book)
-
-    books = list_books()
-
-    delete_book(book_id, updated_book)
+    log_title("RUNNING NEGATIVE SMOKE TESTS", '*')
+    negative_tests()

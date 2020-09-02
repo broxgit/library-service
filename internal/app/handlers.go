@@ -48,8 +48,22 @@ func CreateBook(c *gin.Context) {
 func DeleteBookById(c *gin.Context) {
 	// delete is a no-op if the element doesn't exist,
 	// so we shouldn't receive an error
-	delete(bookCache, c.Param("id"))
-	c.JSON(http.StatusNoContent, gin.H{})
+
+	book := getBookFromCache(c)
+	if book != nil {
+		// verify that If-Match equals current version
+		if book.Version == c.GetHeader("If-Match") {
+			delete(bookCache, c.Param("id"))
+			c.JSON(http.StatusNoContent, gin.H{})
+		} else {
+			handleError(c, nil, errors.INVALID_IF_MATCH(book.Version, c.GetHeader("If-Match")))
+			return
+		}
+	} else {
+		// book didn't exist in the cache, return an error
+		handleError(c, nil, errors.BOOK_NOT_FOUND(c.Param("id")))
+		return
+	}
 }
 
 // GetBookById - Returns a book for a given id.
@@ -96,12 +110,19 @@ func UpdateBookById(c *gin.Context) {
 		return
 	}
 
-	// update book metadata
-	book.LastUpdateTime = time.Now()
-	book.Version = guuid.New().String()
-	bookCache[book.Id] = &book
+	// verify that If-Match equals current version
+	ifMatch := c.GetHeader("If-Match")
+	if bookCheck.Version == ifMatch {
+		// update book metadata
+		book.LastUpdateTime = time.Now()
+		book.Version = guuid.New().String()
+		bookCache[book.Id] = &book
 
-	c.JSON(http.StatusOK, book)
+		c.JSON(http.StatusOK, book)
+	} else {
+		handleError(c, nil, errors.INVALID_IF_MATCH(book.Version, ifMatch))
+		return
+	}
 }
 
 func handleError(c *gin.Context, err error, libError errors.LibraryError) {

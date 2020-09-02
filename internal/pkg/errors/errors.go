@@ -19,3 +19,7 @@ func BOOK_NOT_FOUND(id string) LibraryError {
 func BOOK_ALREADY_EXISTS(id string) LibraryError {
 	return LibraryError{1002, fmt.Sprintf("Book already exists with id: %v", id), 400}
 }
+
+func INVALID_IF_MATCH(ifMatch string, expectedIfMatch string) LibraryError {
+	return LibraryError{1002, fmt.Sprintf("Operation failed. Provided If-Match (version): '%v' does not equal current If-Match (version): '%v'", ifMatch, expectedIfMatch), 400}
+}
