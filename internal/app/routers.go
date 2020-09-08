@@ -45,12 +45,23 @@ func Index(c *gin.Context) {
 	c.String(http.StatusOK, "OK")
 }
 
+func Status(c *gin.Context) {
+	c.String(http.StatusOK, "OK")
+}
+
 var routes = Routes{
 	{
 		"Index",
 		http.MethodGet,
 		"/library-service/v1/",
 		Index,
+	},
+
+	{
+		"Status",
+		http.MethodGet,
+		"/library-service/v1/status",
+		Status,
 	},
 
 	{

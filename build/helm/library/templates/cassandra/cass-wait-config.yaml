@@ -1,0 +1,36 @@
+{{/* a simple bash script in a config map that will wait for cassandra to be ready/running before continuing */}}
+{{- if .Values.cassandra.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cass-wait-config
+  namespace: {{.Release.Namespace}}
+data:
+  cass-wait-script.sh: |
+    #!/bin/bash
+
+    STATUS_TIMEOUT={{.Values.cassInit.statusCheck.timeout}}
+    STATUS_INTERVAL={{.Values.cassInit.statusCheck.interval}}
+
+    CASSANDRA_HOST="{{ include "library.fullname" . }}-cassandra"
+    CASSANDRA_PORT=9042
+    CASSANDRA_URL="${CASSANDRA_HOST}:${CASSANDRA_PORT}"
+
+    status=1
+
+    until [ $status == 0 ]; do
+      if [ "${attempt_counter}" -eq ${STATUS_TIMEOUT} ]; then
+        exit 1
+      fi
+
+      nc -z "${CASSANDRA_HOST}" ${CASSANDRA_PORT}
+      status=$?
+
+      echo "Waiting to resolve Cassandra hostname ${CASSANDRA_URL}..."
+      attempt_counter=$(($attempt_counter+1))
+      sleep ${STATUS_INTERVAL}
+    done
+
+    echo "Script has finished"
+
+{{- end }}

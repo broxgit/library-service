@@ -1,0 +1,5 @@
+dependencies:
+  - name: cassandra
+    version: 5.6.3
+    repository: https://charts.bitnami.com/bitnami
+    condition: cassandra.enabled
