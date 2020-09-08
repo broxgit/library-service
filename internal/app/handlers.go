@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/broxgit/library-service/internal/pkg/errors"
 	"github.com/broxgit/library-service/internal/pkg/models"
+	"github.com/broxgit/library-service/svc/db"
 	"github.com/gin-gonic/gin"
 	guuid "github.com/google/uuid"
 	"log"
@@ -11,11 +12,18 @@ import (
 	"time"
 )
 
+// initialize with a database object
 func init() {
-	bookCache = make(map[string]*models.Book)
+	var err error
+
+	bookDatabase, err = db.GetDb()
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 }
 
-var bookCache map[string]*models.Book
+var bookDatabase db.Database
 
 // CreateBook - Create a book
 func CreateBook(c *gin.Context) {
@@ -28,8 +36,9 @@ func CreateBook(c *gin.Context) {
 	}
 
 	// check if book already exists
-	for _, _book := range bookCache {
-		if compareBooks(&book, _book) {
+	books, err := bookDatabase.ListBooks()
+	for _, _book := range books {
+		if compareBooks(book, _book) {
 			handleError(c, nil, errors.BOOK_ALREADY_EXISTS(_book.Id))
 			return
 		}
@@ -40,7 +49,10 @@ func CreateBook(c *gin.Context) {
 	book.LastUpdateTime = time.Now()
 	book.Id = guuid.New().String()
 	book.Version = guuid.New().String()
-	bookCache[book.Id] = &book
+	err = bookDatabase.CreateBook(book)
+	if err != nil {
+		handleError(c, err, errors.BOOK_SAVE_ERROR())
+	}
 	c.JSON(http.StatusCreated, book)
 }
 
@@ -49,11 +61,14 @@ func DeleteBookById(c *gin.Context) {
 	// delete is a no-op if the element doesn't exist,
 	// so we shouldn't receive an error
 
-	book := getBookFromCache(c)
-	if book != nil {
+	book, err := getBookFromDatabase(c)
+	if err == nil {
 		// verify that If-Match equals current version
 		if book.Version == c.GetHeader("If-Match") {
-			delete(bookCache, c.Param("id"))
+			err := bookDatabase.DeleteBook(c.Param("id"))
+			if err != nil {
+				handleError(c, err, errors.INTERNAL_SERVER_ERROR())
+			}
 			c.JSON(http.StatusNoContent, gin.H{})
 		} else {
 			handleError(c, nil, errors.INVALID_IF_MATCH(book.Version, c.GetHeader("If-Match")))
@@ -61,19 +76,19 @@ func DeleteBookById(c *gin.Context) {
 		}
 	} else {
 		// book didn't exist in the cache, return an error
-		handleError(c, nil, errors.BOOK_NOT_FOUND(c.Param("id")))
+		handleError(c, err, errors.BOOK_NOT_FOUND(c.Param("id")))
 		return
 	}
 }
 
 // GetBookById - Returns a book for a given id.
 func GetBookById(c *gin.Context) {
-	book := getBookFromCache(c)
-	if book != nil {
+	book, err := getBookFromDatabase(c)
+	if err == nil {
 		c.JSON(http.StatusOK, book)
 	} else {
 		// book didn't exist in the cache, return an error
-		handleError(c, nil, errors.BOOK_NOT_FOUND(c.Param("id")))
+		handleError(c, err, errors.BOOK_NOT_FOUND(c.Param("id")))
 		return
 	}
 }
@@ -86,9 +101,12 @@ func ListBooks(c *gin.Context) {
 	books = make([]models.Book, 0)
 
 	// build the 'books' array
-	for _, book := range bookCache {
-		books = append(books, *book)
+	books, err := bookDatabase.ListBooks()
+
+	if err != nil {
+		handleError(c, err, errors.INTERNAL_SERVER_ERROR())
 	}
+
 	c.JSON(http.StatusOK, books)
 }
 
@@ -102,10 +120,10 @@ func UpdateBookById(c *gin.Context) {
 		return
 	}
 
-	bookCheck := getBookFromCache(c)
+	bookCheck, err := getBookFromDatabase(c)
 
 	// if book doesn't exist in cache, return an error
-	if bookCheck == nil {
+	if err != nil {
 		handleError(c, nil, errors.BOOK_NOT_FOUND(c.Param("id")))
 		return
 	}
@@ -116,7 +134,11 @@ func UpdateBookById(c *gin.Context) {
 		// update book metadata
 		book.LastUpdateTime = time.Now()
 		book.Version = guuid.New().String()
-		bookCache[book.Id] = &book
+		err := bookDatabase.UpdateBook(book)
+		if err != nil {
+			// an unexpected error has occurred
+			handleError(c, err, errors.INTERNAL_SERVER_ERROR())
+		}
 
 		c.JSON(http.StatusOK, book)
 	} else {
@@ -125,10 +147,11 @@ func UpdateBookById(c *gin.Context) {
 	}
 }
 
+// generic error handling function
 func handleError(c *gin.Context, err error, libError errors.LibraryError) {
 	log.Println(libError.Message)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Print(err.Error())
 	}
 
 	// I'm basically converting LibraryError to an openAPI generated error object, oh well...
@@ -139,17 +162,17 @@ func handleError(c *gin.Context, err error, libError errors.LibraryError) {
 }
 
 // retrieve a book from the cache map
-func getBookFromCache(c *gin.Context) *models.Book {
+func getBookFromDatabase(c *gin.Context) (models.Book, error) {
 	id := c.Param("id")
-	book, found := bookCache[id]
-	if !found {
-		return nil
+	book, err := bookDatabase.GetBook(id)
+	if err != nil {
+		return book, err
 	}
-	return book
+	return book, nil
 }
 
 // return true if two books are identical
-func compareBooks(book *models.Book, book2 *models.Book) bool {
+func compareBooks(book models.Book, book2 models.Book) bool {
 	if strings.ToLower(book.Title) == strings.ToLower(book.Title) {
 		if book.Year == book.Year {
 			for i := 0; i < len(book.Authors); i++ {

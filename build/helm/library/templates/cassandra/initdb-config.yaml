@@ -1,0 +1,21 @@
+{{- if .Values.cassandra.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cassandra-init-config
+  namespace: {{ .Release.Namespace }}
+data:
+  init-db-script.cql: |
+    CREATE KEYSPACE IF NOT EXISTS {{.Values.cassandra.keyspace}} WITH replication = {'class':'SimpleStrategy', 'replication_factor': 1};
+
+    CREATE TABLE IF NOT EXISTS {{.Values.cassandra.keyspace}}.books (
+    id text PRIMARY KEY,
+    title text,
+    authors list<text>,
+    year int,
+    version text,
+    creationTime TIMESTAMP,
+    lastUpdateTime TIMESTAMP,
+    comment text
+    );
+{{- end }}

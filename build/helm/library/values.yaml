@@ -1,0 +1,195 @@
+# Default values for library.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: broxhub/library-service
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "cassandra"
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+service:
+  type: NodePort
+  port: 8081
+
+ingress:
+  enabled: false
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths: []
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+cassInit:
+  statusCheck:
+    timeout: 120
+    interval: 3
+
+cassandra:
+  enabled: true
+
+  image:
+    debug: true
+
+  keyspace: "library"
+
+  initDBConfigMap: cassandra-init-config
+
+  dbUser:
+    user: digicert
+    password: digipass
+  ## Specify a service type
+  ## ref: http://kubernetes.io/docs/user-guide/services/
+  service:
+    ## Service type
+    ##
+    type: ClusterIP
+    ## CQL port
+    ##
+    port: 9042
+    ## Thrift Client API port
+    ##
+    thriftPort: 9160
+    ## Metrics port
+    ##
+    metricsPort: 8080
+    ## Specify the nodePort(s) value(s) for the LoadBalancer and NodePort service types.
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+    ##
+    nodePorts:
+      cql: ''
+      thriftPort: ''
+      metrics: ''
+    ## Set the LoadBalancer service type to internal only.
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+    ##
+    # loadBalancerIP:
+    ## Provide any additional annotations which may be required. This can be used to
+    ## set the LoadBalancer service type to internal only.
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+    ##
+    annotations: {}
+
+  ## Enable persistence using Persistent Volume Claims
+  ## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
+  ##
+  persistence:
+    ## If true, use a Persistent Volume Claim, If false, use emptyDir
+    ##
+    enabled: true
+    ## Persistent Volume Storage Class
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    # storageClass: "-"
+    ## Persistent Volume Claim annotations
+    ##
+    annotations:
+    ## Persistent Volume Access Mode
+    ##
+    accessModes:
+      - ReadWriteOnce
+    ## Persistent Volume size
+    ##
+    size: 8Gi
+
+  ## Cassandra pods' resource requests and limits
+  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## Minimum memory for development is 4GB and 2 CPU cores
+  ## Minimum memory for production is 8GB and 4 CPU cores
+  ## ref: http://docs.datastax.com/en/archived/cassandra/2.0/cassandra/architecture/architecturePlanningHardware_c.html
+  ##
+  resources:
+    # We usually recommend not to specify default resources and to leave this as a conscious
+    # choice for the user. This also increases chances charts run on environments with little
+    # resources, such as Minikube. If you do want to specify resources, uncomment the following
+    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    limits: {}
+    #   cpu: 2
+    #   memory: 4Gi
+    requests: {}
+    #   cpu: 2
+    #   memory: 4Gi
+
+  ## Secret with keystore, keystore password, truststore, truststore password
+  ##
+  # tlsEncryptionSecretName:
+
+  ## ConfigMap with custom cassandra configuration files. This overrides any other Cassandra configuration set in the chart
+  ##
+  # existingConfiguration:
+
+  ## Cluster parameters
+  ##
+  cluster:
+    name: cassandra
+    replicaCount: 1
+    seedCount: 1
+    numTokens: 256
+    datacenter: dc1
+    rack: rack1
+    enableRPC: true
+    endpointSnitch: SimpleSnitch
+    ## Enable the creation of the Pod Disruption Budget
+    ##
+    pdbEnabled: true
+    ## Minimum number of cluster nodes that will be running. Needs pdbEnabled=true
+    ##
+    minAvailable: 1
+    ## Maximum number of cluster nodes that may not be running. Needs pdbEnabled=true.
+    ##
+    # maxUnavailable: 1
+    ## Encryption values. NOTE: They require tlsEncryptionSecretName
+    ##
+    internodeEncryption: none
+    clientEncryption: false
+    domain: cluster.local

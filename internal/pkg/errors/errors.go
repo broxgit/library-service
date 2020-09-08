@@ -21,5 +21,13 @@ func BOOK_ALREADY_EXISTS(id string) LibraryError {
 }
 
 func INVALID_IF_MATCH(ifMatch string, expectedIfMatch string) LibraryError {
-	return LibraryError{1002, fmt.Sprintf("Operation failed. Provided If-Match (version): '%v' does not equal current If-Match (version): '%v'", ifMatch, expectedIfMatch), 400}
+	return LibraryError{1003, fmt.Sprintf("Operation failed. Provided If-Match (version): '%v' does not equal current If-Match (version): '%v'", ifMatch, expectedIfMatch), 400}
+}
+
+func INTERNAL_SERVER_ERROR() LibraryError {
+	return LibraryError{1004, "INTERNAL SERVER ERROR", 400}
+}
+
+func BOOK_SAVE_ERROR() LibraryError {
+	return LibraryError{1005, "Could not save book to database", 400}
 }

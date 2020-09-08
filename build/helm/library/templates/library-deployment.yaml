@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "library.fullname" . }}
+  labels:
+    {{- include "library.labels" . | nindent 4 }}
+spec:
+{{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      {{- include "library.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "library.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "library.serviceAccountName" . }}
+      {{- if .Values.cassandra.enabled }}
+      {{/* I decided to use an initContainer to wait for the Cassandra service to be up and running */}}
+      {{/* This same functionality could have been implemented in the Library service code, however this creates reusability if we decide to use Cassandra in other pods/services that would also need to wait for Cassandra to be ready */}}
+      {{/* The goal here is demonstrate and understanding of initContainers, scripts within configMaps, and reusability of K8s objects */}}
+      {{/* This initContainer could also be expanded to pre-load Cassandra with the required Keyspace and Table */}}
+      initContainers:
+        - name: "{{ .Chart.Name }}-cassandra-check"
+          image: "curlimages/curl:latest"
+          imagePullPolicy: IfNotPresent
+          args: ['sh', "/tmp/cass-wait-script.sh"]
+          volumeMounts:
+            - name: cass-wait-script
+              mountPath: /tmp/cass-wait-script.sh
+              subPath: cass-wait-script.sh
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.cassandra.enabled }}
+          env:
+            - name: CASSANDRA_KEYSPACE
+              value: {{.Values.cassandra.keyspace}}
+            - name: CASSANDRA_HOSTNAME
+              value: {{ include "library.fullname" . }}-cassandra
+            - name: CASSANDRA_USERNAME
+              value: {{.Values.cassandra.dbUser.user}}
+            - name: CASSANDRA_PASSWORD
+              value: {{.Values.cassandra.dbUser.password}}
+          {{- end }}
+          ports:
+            - name: "library-service"
+              containerPort: 8081
+          livenessProbe:
+            httpGet:
+              path: /library-service/v1/status
+              port: 8081
+          readinessProbe:
+            httpGet:
+              path: /library-service/v1/status
+              port: 8081
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: cass-wait-script
+          configMap:
+            name: cass-wait-config
+            defaultMode: 0777

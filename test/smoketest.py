@@ -1,16 +1,19 @@
+import argparse
 import json
 import random
 import re
+from argparse import RawTextHelpFormatter
 from copy import deepcopy
 
 import requests
 
-URL = "http://localhost:8081/library-service/v1"
+URL = "http://localhost:%s/library-service/v1"
+PORT = 8081
 BOOKS_ENDPOINT = "/books"
 BOOK_BY_ID_ENDPOINT = "/books/%s"
 
-BOOKS_URL = URL + BOOKS_ENDPOINT
-BOOKS_BY_ID_URL = URL + BOOK_BY_ID_ENDPOINT
+BOOKS_URL = None
+BOOKS_BY_ID_URL = None
 
 BOOK_DATA = {
     "title": "The Great Gatsby",
@@ -274,6 +277,22 @@ def negative_tests():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Library Service Smoke Tests",
+                                     formatter_class=RawTextHelpFormatter)
+
+    parser.add_argument("-p", "--port", default=8081, required=False,
+                        help='The port where the library service is hosted')
+
+    args = parser.parse_args()
+
+    if args.port:
+        URL = URL % args.port
+    else:
+        URL = URL % PORT
+
+    BOOKS_URL = URL + BOOKS_ENDPOINT
+    BOOKS_BY_ID_URL = URL + BOOK_BY_ID_ENDPOINT
+
     delete_all_books()
 
     log_title("RUNNING POSITIVE SMOKE TESTS", '*')
